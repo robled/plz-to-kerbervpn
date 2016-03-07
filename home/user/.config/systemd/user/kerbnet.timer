@@ -1,0 +1,10 @@
+[Unit]
+Description=kerbnet.sh
+
+[Timer]
+OnBootSec=10min
+OnUnitActiveSec=60min
+Unit=kerbnet.service
+
+[Install]
+WantedBy=timers.target

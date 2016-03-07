@@ -1,0 +1,10 @@
+[Unit]
+Description=kerbnet.sh
+
+[Service]
+ExecStart=/usrlocal/bin/kerbnet.sh
+Type=simple
+Environment=DISPLAY=:0
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,3 @@
+guake -e 'unset TMUX; tmux new-session -s guake || tmux attach -t guake' &
+/usr/local/bin/kerbnet.sh user1@EXAMPLE1.ORG 172.31.31.3 &
+/usr/local/bin/kerbnet.sh user2@EXAMPLE2.COM 10.5.0.11 &

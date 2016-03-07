@@ -1,0 +1,80 @@
+#!/bin/bash
+# Script to dispatch NetworkManager events
+#
+# Runs ifupdown scripts when NetworkManager fiddles with interfaces.
+# See NetworkManager(8) for further documentation of the dispatcher events.
+
+if [ -z "$1" ]; then
+    echo "$0: called with no interface" 1>&2
+    exit 1;
+fi
+
+# Run the right scripts
+case "$2" in
+    up)
+    logger 'NetworkManager dispatcher auto-vpn script has happened'
+    user='user2'
+    display=':0'
+    kerbnet='/usr/local/bin/kerbnet.sh'
+    uid=$(sudo -u "$user" id -u)
+    tmux_session='guake'
+    vpns=(example1 example2)
+    for vpn in "${vpns[@]}"; do
+        declare -A "$vpn"
+    done
+    example1[princ]='user1@EXAMPLE1.ORG'
+    example1[kdcip]='172.31.31.3'
+    example1[srv]='_kerberos._tcp.example1.org'
+    example1[dnsip]='172.31.31.1'
+    example2[princ]='user2@EXAMPLE2.COM'
+    example2[kdcip]='10.5.0.11'
+    example2[srv]='_kerberos._tcp.example2.com'
+    example2[dnsip]='10.10.160.1'
+    if who | awk {'print $2'} | grep "$display" > /dev/null; then
+        for vpn in "${vpns[@]}"; do
+            # http://stackoverflow.com/a/15861386
+            eval princ=\${$vpn[princ]}
+            eval kdcip=\${$vpn[kdcip]}
+            sudo -u "$user" DISPLAY="$display" "$kerbnet" "$princ" "$kdcip" \
+                > /dev/null &
+        done
+    fi
+    count=0
+    until [[ "$count" -ge 50 ]]; do
+        count=$[${count} +1]
+        if sudo -u "$user" tmux ls | grep "$tmux_session" > /dev/null; then
+            for vpn in "${vpns[@]}"; do
+                # http://stackoverflow.com/a/15861386
+                eval princ=\${$vpn[princ]}
+                eval kdcip=\${$vpn[kdcip]}
+                eval srv=\${$vpn[srv]}
+                eval dnsip=\${$vpn[dnsip]}
+                if ! sudo -u "$user" tmux list-windows -t "$tmux_session" | \
+                    grep vpn-"${vpn}" > /dev/null; then
+                    if ! ping -c1 -W 2 -n "$kdcip" > /dev/null && \
+                        ! dig "$srv" SRV +time=1 +tries=1 @"${dnsip}" \
+                        > /dev/null; then
+                        sudo -u "$user" DISPLAY="$display" \
+                            "DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/${uid}/bus" notify-send \
+                            "Connecting to "$vpn" VPN"
+                        sudo -u "$user" tmux new-window -t "$tmux_session" \
+                            -n "vpn-${vpn}" "sudo openvpn /etc/openvpn/${vpn}.conf; bash"
+                    fi
+                fi
+            done
+            break
+        else
+            sleep 0.5s
+        fi
+    done
+    ;;
+    down)
+    ;;
+    hostname|dhcp4-change|dhcp6-change)
+    # Do nothing
+    ;;
+    *)
+    echo "$0: called with unknown action \`$2'" 1>&2
+    exit 1
+    ;;
+esac
