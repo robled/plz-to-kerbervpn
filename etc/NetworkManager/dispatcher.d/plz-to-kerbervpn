@@ -12,6 +12,10 @@ fi
 # Run the right scripts
 case "$2" in
     up)
+    ;;
+    down)
+    ;;
+    hostname|dhcp4-change|dhcp6-change)
     logger 'NetworkManager dispatcher auto-vpn script has happened'
     user='user2'
     display=':0'
@@ -67,11 +71,6 @@ case "$2" in
             sleep 0.5s
         fi
     done
-    ;;
-    down)
-    ;;
-    hostname|dhcp4-change|dhcp6-change)
-    # Do nothing
     ;;
     *)
     echo "$0: called with unknown action \`$2'" 1>&2
